@@ -1,1 +1,0 @@
-Token = 'токен VK API'
