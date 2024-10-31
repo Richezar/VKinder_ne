@@ -1,11 +1,13 @@
 import datetime
-from random import randrange
+from vk_api.utils import get_random_id
 import requests
 import vk_api
+from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.longpoll import VkLongPoll, VkEventType
 from database import create_tables, Users
 import sqlalchemy as sq
 from sqlalchemy.orm import sessionmaker
+from config import token_bot, group_id
 
 DSN = 'postgresql://postgres:postgres@localhost:5432/test'
 engine = sq.create_engine(DSN)
@@ -13,14 +15,25 @@ create_tables(engine)
 Session = sessionmaker(bind=engine)
 session = Session()
 
-token = '---'
+token = token_bot
 
 vk = vk_api.VkApi(token=token)
 longpoll = VkLongPoll(vk)  # РАБОТА С СООБЩЕНИЯМИ
 
+keyboard_ontime = VkKeyboard(one_time=False)
+keyboard_ontime.add_button('найти', color=VkKeyboardColor.SECONDARY)
+keyboard_ontime.add_button('избранное', color=VkKeyboardColor.POSITIVE)
 
-def write_msg(user_id, message):
-    vk.method('messages.send', {'user_id': user_id, 'message': message, 'random_id': randrange(10 ** 7), })
+def write_msg(user_id, message, keyboard = None):
+    post = {
+            'user_id': user_id,
+            'message': message,
+            'random_id': get_random_id()
+            }
+    if keyboard != None:
+        post['keyboard'] = keyboard.get_keyboard()
+
+    vk.method('messages.send', post)
 
 
 def get_name(user_id):
@@ -112,24 +125,20 @@ def get_age(user_id):
 
 
 for event in longpoll.listen():
-
-    if event.type == VkEventType.MESSAGE_NEW:
-
-        if event.to_me:
-            request = event.text.lower()
-
-            if request == "привет":
-                id_user = event.user_id
-                city = get_city(event.user_id)
-                sex = get_sex(event.user_id)
-                age = get_age(event.user_id)
-                write_msg(event.user_id, f"Хай, {get_name(event.user_id)}, id - {id_user}\n"
-                                         f"Ваш город - {city}\n"
-                                         f"Ваш пол - {sex}\n"
-                                         f"Ваш возраст - {age}\n")
-                session.add(Users(id_user=id_user, age=age, sex=sex, city=city))
-                session.commit()
-            elif request == "пока":
-                write_msg(event.user_id, "Пока((")
-            else:
-                write_msg(event.user_id, "Не поняла вашего ответа...")
+    if event.type == VkEventType.MESSAGE_NEW and event.to_me:
+        request = event.text.lower()
+        if request == "привет":
+            id_user = event.user_id
+            city = get_city(event.user_id)
+            sex = get_sex(event.user_id)
+            age = get_age(event.user_id)
+            write_msg(event.user_id, f"Хай, {get_name(event.user_id)}, id - {id_user}\n"
+                                     f"Ваш город - {city}\n"
+                                     f"Ваш пол - {sex}\n"
+                                     f"Ваш возраст - {age}\n", keyboard=keyboard_ontime)
+            session.add(Users(id_user=id_user, age=age, sex=sex, city=city))
+            session.commit()
+        elif request == "пока":
+            write_msg(event.user_id, "Пока((")
+        else:
+            write_msg(event.user_id, "Не поняла вашего ответа...")
