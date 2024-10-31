@@ -4,16 +4,8 @@ import requests
 import vk_api
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.longpoll import VkLongPoll, VkEventType
-from database import create_tables, Users
-import sqlalchemy as sq
-from sqlalchemy.orm import sessionmaker
-from config import token_bot, group_id, token_user
-
-DSN = 'postgresql://postgres:postgres@localhost:5432/test'
-engine = sq.create_engine(DSN)
-create_tables(engine)
-Session = sessionmaker(bind=engine)
-session = Session()
+from database import Users, session
+from config import token_bot
 
 token = token_bot
 
@@ -24,13 +16,13 @@ keyboard_ontime = VkKeyboard(one_time=False)
 keyboard_ontime.add_button('найти', color=VkKeyboardColor.SECONDARY)
 keyboard_ontime.add_button('избранное', color=VkKeyboardColor.POSITIVE)
 
-def write_msg(user_id, message, keyboard = None):
+def write_msg(user_id, message, keyboard=None):
     post = {
             'user_id': user_id,
             'message': message,
             'random_id': get_random_id()
             }
-    if keyboard != None:
+    if keyboard is not None:
         post['keyboard'] = keyboard.get_keyboard()
 
     vk.method('messages.send', post)
@@ -54,7 +46,7 @@ class VkUser():
         if response['response'][0]['sex'] == 2:
             self.sex = 'мужской'
         self.city = self.get_city(response)
-        self.age = self.get_age(response['response'][0]['bdate'])
+        self.age = self.get_age(response['response'][0])
         return [self.id_user, self.first_name, self.last_name, self.sex, self.city, self.age]
 
     def get_city(self, result):
@@ -71,18 +63,24 @@ class VkUser():
                         return city
 
     def get_age(self, result):
-        date_list = result.split('.')
-        if len(date_list) == 3:
-            year = int(date_list[2])
-            year_now = int(datetime.date.today().year)
-            return year_now - year
-        else:
-            write_msg(self.id_user, 'Введите ваш возраст: ')
-            for event in longpoll.listen():
-                if event.type == VkEventType.MESSAGE_NEW:
-                    if event.to_me:
+        try:
+            date_list = result['bdate'].split('.')
+            if len(date_list) == 3:
+                year = int(date_list[2])
+                year_now = int(datetime.date.today().year)
+                return year_now - year
+            else:
+                write_msg(self.id_user, 'Введите ваш возраст: ')
+                for event in longpoll.listen():
+                    if event.type == VkEventType.MESSAGE_NEW and event.to_me:
                         age = event.text
                         return age
+        except KeyError:
+            write_msg(self.id_user, 'Введите ваш возраст: ')
+            for event in longpoll.listen():
+                if event.type == VkEventType.MESSAGE_NEW and event.to_me:
+                    age = event.text
+                    return age
 
 
 

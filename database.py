@@ -1,7 +1,9 @@
 import sqlalchemy as sq
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
 Base = declarative_base()
+DSN = 'postgresql://postgres:postgres@localhost:5432/test'
+engine = sq.create_engine(DSN)
 
 class Users(Base):
     __tablename__ = 'users'
@@ -17,3 +19,7 @@ class Users(Base):
 def create_tables(engine):
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
+
+create_tables(engine)
+Session = sessionmaker(bind=engine)
+session = Session()
