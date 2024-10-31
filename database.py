@@ -8,6 +8,8 @@ class Users(Base):
 
     id = sq.Column(sq.Integer, primary_key=True)
     id_user = sq.Column(sq.String(length=20), unique=True, nullable=False)
+    first_name = sq.Column(sq.String(length=20), unique=False, nullable=False)
+    last_name = sq.Column(sq.String(length=20), unique=False, nullable=False)
     age = sq.Column(sq.Integer, nullable=False)
     sex = sq.Column(sq.String(length=7), nullable=False)
     city = sq.Column(sq.String(length=20), nullable=False)
