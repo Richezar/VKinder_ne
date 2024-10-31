@@ -1,2 +1,4 @@
+.idea/
+**/__pycache__/
 config.py
-.idea
+.DS_Store

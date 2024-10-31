@@ -1,131 +1,127 @@
 import datetime
-from random import randrange
-
+from vk_api.utils import get_random_id
 import requests
 import vk_api
+from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.longpoll import VkLongPoll, VkEventType
+from database import create_tables, Users
+import sqlalchemy as sq
+from sqlalchemy.orm import sessionmaker
+from config import token_bot, user_token
 
-from config import Token
+DSN = 'postgresql://postgres:postgres@localhost:5432/nikolayshirokov'
+engine = sq.create_engine(DSN)
+create_tables(engine)
+Session = sessionmaker(bind=engine)
+session = Session()
 
-token = Token
+token = token_bot
 
 vk = vk_api.VkApi(token=token)
 longpoll = VkLongPoll(vk)  # РАБОТА С СООБЩЕНИЯМИ
 
-
-def write_msg(user_id, message):
-    vk.method('messages.send', {'user_id': user_id, 'message': message, 'random_id': randrange(10 ** 7), })
-
-
-def get_name(user_id):
-    """ПОЛУЧЕНИЕ ИМЕНИ ПОЛЬЗОВАТЕЛЯ, КОТОРЫЙ НАПИСАЛ БОТУ"""
-    url = f'https://api.vk.com/method/users.get'
-    params = {'access_token': token,
-              'user_ids': user_id,
-              'v': '5.131'}
-    repl = requests.get(url, params=params)
-    response = repl.json()
-    information_dict = response['response']
-    for i in information_dict:
-        for key, value in i.items():
-            first_name = i.get('first_name')
-            return first_name
+keyboard_ontime = VkKeyboard(one_time=False)
+keyboard_ontime.add_button('найти', color=VkKeyboardColor.SECONDARY)
+keyboard_ontime.add_button('избранное', color=VkKeyboardColor.POSITIVE)
 
 
-def get_city(user_id):
-    """ПОЛУЧЕНИЕ ГОРОДА ПОЛЬЗОВАТЕЛЯ, КОТОРЫЙ НАПИСАЛ БОТУ"""
-    url = f'https://api.vk.com/method/users.get'
-    params = {'access_token': token,
-              'user_ids': user_id,
-              'fields': 'city',
-              'v': '5.131'}
-    repl = requests.get(url, params=params)
-    response = repl.json()
-    information_dict = response['response']
-    for i in information_dict:
-        if 'city' in i:
-            city = i.get('city')
-            title = city.get('title')
-            # id = str(city.get('id'))
-            return title
-        else:
-            write_msg(user_id, 'Введите название вашего города: ')
-            for event in longpoll.listen():
-                if event.type == VkEventType.MESSAGE_NEW:
+def write_msg(user_id, message, keyboard=None):
+    post = {
+        'user_id': user_id,
+        'message': message,
+        'random_id': get_random_id()
+    }
+    if keyboard is not None:
+        post['keyboard'] = keyboard.get_keyboard()
 
-                    if event.to_me:
+    vk.method('messages.send', post)
+
+
+class VkUser:
+    def __init__(self, id_user):
+
+        self.id_user = id_user
+
+    def get_user_info(self):
+        url = 'https://api.vk.com/method/users.get'
+        params = {'access_token': token,
+                  'user_ids': self.id_user,
+                  'fields': 'first_name,bdate,city,sex',
+                  'v': '5.131'}
+        repl = requests.get(url, params=params)
+        response = repl.json()
+        self.first_name = response['response'][0]['first_name']
+        self.last_name = response['response'][0]['last_name']
+        if response['response'][0]['sex'] == 1:
+            self.sex = 'женский'
+        if response['response'][0]['sex'] == 2:
+            self.sex = 'мужской'
+        self.city = self.get_city(response)
+        self.id_city = self.get_id_city()
+        self.age = self.get_age(response['response'][0])
+        return [self.id_user, self.first_name, self.last_name, self.sex, self.city, self.id_city, self.age]
+
+    def get_city(self, result):
+        for i in result['response']:
+            if 'city' in i:
+                city = i.get('city')
+                title = city.get('title')
+                return title
+            else:
+                write_msg(self.id_user, 'Введите название вашего города: ')
+                for event in longpoll.listen():
+                    if event.type == VkEventType.MESSAGE_NEW and event.to_me:
                         city = event.text
                         return city
 
+    def get_id_city(self):
+        """ПОЛУЧЕНИЕ ID ГОРОДА ПОЛЬЗОВАТЕЛЯ ПО НАЗВАНИЮ"""
+        url = f'https://api.vk.com/method/database.getCities'
+        params = {'access_token': user_token,
+                  'q': f'{self.city}',
+                  'v': '5.131'}
+        repl = requests.get(url, params=params)
+        response = repl.json()
+        information_list = response['response']
+        id_city = information_list['items']
+        return id_city[0]['id']
 
-def get_sex(user_id):
-    """ПОЛУЧЕНИЕ  ПОЛА ПОЛЬЗОВАТЕЛЯ, КОТОРЫЙ НАПИСАЛ БОТУ"""
-    url = f'https://api.vk.com/method/users.get'
-    params = {'access_token': token,
-              'user_ids': user_id,
-              'fields': 'sex',
-              'v': '5.131'}
-    repl = requests.get(url, params=params)
-    response = repl.json()
-    information_dict = response['response']
-    for i in information_dict:
-        sex = i.get('sex')
-        if sex == 1:
-            return 'женский'
-        elif sex == 2:
-            return 'мужской'
-        else:
-            write_msg(user_id, 'Введите ваш пол: ')
+    def get_age(self, result):
+        try:
+            date_list = result['bdate'].split('.')
+            if len(date_list) == 3:
+                year = int(date_list[2])
+                year_now = int(datetime.date.today().year)
+                return year_now - year
+            else:
+                write_msg(self.id_user, 'Введите ваш возраст: ')
+                for event in longpoll.listen():
+                    if event.type == VkEventType.MESSAGE_NEW:
+                        if event.to_me:
+                            age = event.text
+                            return age
+        except KeyError:
+            write_msg(self.id_user, 'Введите ваш возраст: ')
             for event in longpoll.listen():
                 if event.type == VkEventType.MESSAGE_NEW:
-
-                    if event.to_me:
-                        sex = event.text
-                        return sex
-
-
-def get_age(user_id):
-    """ПОЛУЧЕНИЕ ВОЗРАСТА ПОЛЬЗОВАТЕЛЯ """
-    url = url = f'https://api.vk.com/method/users.get'
-    params = {'access_token': token,
-              'user_ids': user_id,
-              'fields': 'bdate',
-              'v': '5.131'}
-    repl = requests.get(url, params=params)
-    response = repl.json()
-    information_dict = response['response']
-    for i in information_dict:
-        date = i.get('bdate')
-        date_list = date.split('.')
-        if len(date_list) == 3:
-            year = int(date_list[2])
-            year_now = int(datetime.date.today().year)
-            return year_now - year
-        else:
-            write_msg(user_id, 'Введите ваш возраст: ')
-            for event in longpoll.listen():
-                if event.type == VkEventType.MESSAGE_NEW:
-
                     if event.to_me:
                         age = event.text
                         return age
 
 
 for event in longpoll.listen():
-    if event.type == VkEventType.MESSAGE_NEW:
-
-        if event.to_me:
-            request = event.text.lower()
-
-            if request == "привет":
-                write_msg(event.user_id, f"Хай, {get_name(event.user_id)},id {event.user_id}")
-            elif request == "пока":
-                write_msg(event.user_id, "Пока((")
-            elif request == "город":
-                write_msg(event.user_id, f"Ваш город {get_city(event.user_id)}")
-            elif request == "пол":
-                write_msg(event.user_id, f"Ваш пол {get_sex(event.user_id)}")
-            elif request == "возраст":
-                write_msg(event.user_id, f"Ваш возраст {get_age(event.user_id)}")
-            else:
-                write_msg(event.user_id, "Не поняла вашего ответа...")
+    if event.type == VkEventType.MESSAGE_NEW and event.to_me:
+        request = event.text.lower()
+        if request == "привет":
+            user1 = VkUser(event.user_id)
+            id_user, first_name, last_name, sex, city, id_city, age = user1.get_user_info()
+            write_msg(event.user_id, f"Хай, {first_name}, id - {id_user}\n"
+                                     f"Ваш город - {city}, id - {id_city}\n"
+                                     f"Ваш пол - {sex}\n"
+                                     f"Ваш возраст - {age}\n", keyboard=keyboard_ontime)
+            session.add(Users(id_user=id_user, first_name=first_name, last_name=last_name, age=age, sex=sex, city=city, id_city = id_city))
+            session.commit()
+        elif request == "пока":
+            write_msg(event.user_id, "Пока((")
+        else:
+            write_msg(event.user_id, "Не поняла вашего ответа...")
