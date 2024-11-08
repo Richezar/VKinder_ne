@@ -22,7 +22,9 @@ class Favorites(Base):
 
     id = sq.Column(sq.Integer, primary_key=True)
     user_id = sq.Column(sq.String(length=20), nullable=False)
-    favorite_user_id = sq.Column(sq.String(length=20), nullable=False)
+    first_name = sq.Column(sq.String(length=20), unique=False, nullable=False)
+    last_name = sq.Column(sq.String(length=20), unique=False, nullable=False)
+    favorite_link_user = sq.Column(sq.String(length=50), unique=False, nullable=False)
 
 
 def create_tables(engine):

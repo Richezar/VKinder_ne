@@ -19,8 +19,6 @@ keyboard_ontime.add_line()
 keyboard_ontime.add_button('в избранное', color=VkKeyboardColor.POSITIVE)
 keyboard_ontime.add_line()
 keyboard_ontime.add_button('в избранном', color=VkKeyboardColor.POSITIVE)
-keyboard_ontime.add_line()
-keyboard_ontime.add_button('далее', color=VkKeyboardColor.POSITIVE)
 
 def write_msg(user_id, message, keyboard=None):
     post = {
@@ -176,20 +174,16 @@ for event in longpoll.listen():
                     f'- {list_people[count][0]} {list_people[count][1]}\n'
                             f'- {list_people[count][3]}\n'
                             f'- {photos3}\n')
-        # elif request == "в избранное":
-        #     favorite = Favorites(first_name_user=first_name_user, last_name_user=last_name_user,
-        #                                vk_id_user=vk_id_user, vk_link_user=vk_link_user)
-        #     session.add(favorite)  # добавляем в бд
-        #     session.commit()  # сохраняем изменения
-        #     session.refresh(favorite)  # обновляем состояние объекта
-        #     write_msg(event.user_id,
-        #               f'- {first_name_user} {last_name_user} добавлен(а) в избранное\n')
-        # elif request == "в избранном":
-        #     favorites_users = session.query(Favorites).all()
-        #     for f_user in favorites_users:
-        #         write_msg(event.user_id,
-        #                   f'- {f_user.first_name_user} {f_user.last_name_user}\n'
-        #                   f'- {f_user.vk_link_user}\n'
-        #                   f'три фотографии')
+        elif request == "в избранное":
+            session.add(Favorites(user_id=id_user, first_name=list_people[count][0], last_name=list_people[count][1], favorite_link_user=list_people[count][3]))  # добавляем в бд
+            session.commit()  # сохраняем изменения
+            write_msg(event.user_id,
+                      f'- {list_people[count][0]} {list_people[count][1]} добавлен(а) в избранное\n')
+        elif request == "в избранном":
+            result = session.query(Favorites.first_name, Favorites.last_name, Favorites.favorite_link_user).filter(Favorites.user_id == str(id_user)).all()
+            for user in result:
+                write_msg(event.user_id,
+                        f'- {user[0]} {user[1]}\n'
+                                f'- {user[2]}\n')
         else:
             write_msg(event.user_id, "Не поняла вашего ответа...")
