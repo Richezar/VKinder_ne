@@ -186,7 +186,7 @@ for event in longpoll.listen():
                           f'- {list_people[count][0]} {list_people[count][1]}\n'
                           f'- {list_people[count][3]}\n')
                 photos3 = user1.get_photos(list_people[count][2])
-                if photos3 != []:
+                if photos3:
                     user1.send_photos(photos3)
                 else:
                     write_msg(event.user_id,
@@ -194,7 +194,7 @@ for event in longpoll.listen():
             except IndexError:
                 write_msg(event.user_id, f'Людей больше не найдено')
         elif request == "в избранное":
-            existing_id_user = session.query(Favorites).filter_by(user_id=str(id_user)).first()
+            existing_id_user = session.query(Favorites).filter_by(favorite_link_user=list_people[count][3]).first()
             if not existing_id_user:
                 session.add(
                     Favorites(user_id=id_user, first_name=list_people[count][0], last_name=list_people[count][1],
