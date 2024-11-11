@@ -1,7 +1,9 @@
 import sqlalchemy as sq
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 Base = declarative_base()
+DSN = 'postgresql://postgres:postgres@localhost:5432/nikolayshirokov'
+engine = sq.create_engine(DSN)
 
 
 class Users(Base):
@@ -16,25 +18,22 @@ class Users(Base):
     city = sq.Column(sq.String(length=20), nullable=False)
     id_city = sq.Column(sq.Integer, nullable=False)
 
-class Find_Users(Base):
-    """СОЗДАНИЕ ТАБЛИЦЫ USERS (НАЙДЕННЫЕ ПОЛЬЗОВАТЕЛИ)"""
-    __tablename__ = 'find_users'
+
+class Favorites(Base):
+    __tablename__ = 'favorites'
 
     id = sq.Column(sq.Integer, primary_key=True)
-    first_name_user = sq.Column(sq.String(length=20), unique=False, nullable=False)
-    last_name_user = sq.Column(sq.String(length=20), unique=False, nullable=False)
-    vk_id_user = sq.Column(sq.String(length=20), unique=True, nullable=False)
-    vk_link_user = sq.Column(sq.String(length=50), unique=True, nullable=False)
+    user_id = sq.Column(sq.String(length=20), nullable=False)
+    first_name = sq.Column(sq.String(length=20), unique=False, nullable=False)
+    last_name = sq.Column(sq.String(length=20), unique=False, nullable=False)
+    favorite_link_user = sq.Column(sq.String(length=50), unique=False, nullable=False)
 
-class Favorites_Users(Base):
-    """СОЗДАНИЕ ТАБЛИЦЫ USERS (ИЗБРАННЫЕ ПОЛЬЗОВАТЕЛИ)"""
-    __tablename__ = 'favorites_users'
 
-    id = sq.Column(sq.Integer, primary_key=True)
-    first_name_user = sq.Column(sq.String(length=20), unique=False, nullable=False)
-    last_name_user = sq.Column(sq.String(length=20), unique=False, nullable=False)
-    vk_id_user = sq.Column(sq.String(length=20), unique=True, nullable=False)
-    vk_link_user = sq.Column(sq.String(length=50), unique=True, nullable=False)
 def create_tables(engine):
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
+
+
+create_tables(engine)
+Session = sessionmaker(bind=engine)
+session = Session()
