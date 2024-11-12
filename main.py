@@ -122,8 +122,15 @@ class VkUser():
         photo_album = sorted(photo_album, key=operator.itemgetter('photo_likes'), reverse=True)
         if len(photo_album) > 3:
             photo_album = photo_album[:photo_numb]
-        photo_links = [f'https://vk.com/id{user_id}?z=photo{user_id}_{link["photo_link"]}' for link in photo_album]
+        photo_links = [f'photo{user_id}_{link["photo_link"]}' for link in photo_album]
         return photo_links
+
+    def send_photos(self, photos):
+        for photo in photos:
+            vk.method('messages.send', {'user_id': self.id_user,
+                                        'access_token': token_user,
+                                        'attachment': {photo},
+                                        'random_id': 0})
 
     def find_user(self):
         """ПОИСК ЧЕЛОВЕКА ПО ПОЛУЧЕННЫМ ДАННЫМ"""
@@ -167,18 +174,32 @@ for event in longpoll.listen():
             session.commit()
             count = -1
         elif request == "найти":
-            count += 1
-            list_people = user1.find_user()
-            photos3 = user1.get_photos(list_people[count][2])
-            write_msg(event.user_id,
-                    f'- {list_people[count][0]} {list_people[count][1]}\n'
-                            f'- {list_people[count][3]}\n'
-                            f'- {photos3}\n')
+            try:
+                count += 1
+                list_people = user1.find_user()
+                id_search = list_people[count][2]
+                write_msg(event.user_id,
+                          f'- {list_people[count][0]} {list_people[count][1]}\n'
+                          f'- {list_people[count][3]}\n')
+                photos3 = user1.get_photos(list_people[count][2])
+                if photos3 != []:
+                    user1.send_photos(photos3)
+                else:
+                    write_msg(event.user_id,
+                              f'Фотографии не найдены')
+            except IndexError:
+                write_msg(event.user_id, f'Людей больше не найдено')
         elif request == "в избранное":
-            session.add(Favorites(user_id=id_user, first_name=list_people[count][0], last_name=list_people[count][1], favorite_link_user=list_people[count][3]))  # добавляем в бд
-            session.commit()  # сохраняем изменения
-            write_msg(event.user_id,
-                      f'- {list_people[count][0]} {list_people[count][1]} добавлен(а) в избранное\n')
+            existing_id_user = session.query(Favorites).filter_by(favorite_link_user=list_people[count][3]).first()
+            if not existing_id_user:
+                session.add(
+                    Favorites(user_id=id_user, first_name=list_people[count][0], last_name=list_people[count][1],
+                              favorite_link_user=list_people[count][3]))  # добавляем в бд
+                session.commit()  # сохраняем изменения
+                write_msg(event.user_id,
+                          f'- {list_people[count][0]} {list_people[count][1]} добавлен(а) в избранное\n')
+            else:
+                write_msg(event.user_id, "Человек уже добавлен в избранное")
         elif request == "в избранном":
             result = session.query(Favorites.first_name, Favorites.last_name, Favorites.favorite_link_user).filter(Favorites.user_id == str(id_user)).all()
             for user in result:
