@@ -45,24 +45,11 @@ class VkUser():
         response = repl.json()
         self.first_name = response['response'][0]['first_name']
         self.last_name = response['response'][0]['last_name']
-        if response['response'][0]['sex'] == 1:
-            self.sex = 'женский'
-        if response['response'][0]['sex'] == 2:
-            self.sex = 'мужской'
+        self.sex = response['response'][0]['sex']
         self.city = self.get_city(response)
         self.id_city = self.get_id_city()
         self.age = self.get_age(response['response'][0])
         return [self.id_user, self.first_name, self.last_name, self.sex, self.city, self.id_city, self.age]
-
-    def get_sex(self):
-        url = 'https://api.vk.com/method/users.get'
-        params = {'access_token': token_bot,
-                  'user_ids': self.id_user,
-                  'fields': 'first_name,bdate,city,sex',
-                  'v': '5.131'}
-        repl = requests.get(url, params=params)
-        response = repl.json()
-        return response['response'][0]['sex']
 
     def get_city(self, result):
         for i in result['response']:
@@ -126,18 +113,24 @@ class VkUser():
         return photo_links
 
     def send_photos(self, photos):
+        p = ''
         for photo in photos:
-            vk.method('messages.send', {'user_id': self.id_user,
-                                        'access_token': token_user,
-                                        'attachment': {photo},
-                                        'random_id': 0})
+            p += photo + ','
+        vk.method('messages.send', {'user_id': self.id_user,
+                                    'access_token': token_user,
+                                    'attachment': p,
+                                    'random_id': 0})
 
     def find_user(self):
         """ПОИСК ЧЕЛОВЕКА ПО ПОЛУЧЕННЫМ ДАННЫМ"""
         url = f'https://api.vk.com/method/users.search'
+        if self.sex == 1:
+            search_sex = 2
+        else:
+            search_sex = 1
         params = {'access_token': token_user,
                   'v': '5.131',
-                  'sex': self.get_sex(),
+                  'sex': search_sex,
                   'age_from': self.age,
                   'age_to': self.age,
                   'city': self.id_city,
@@ -164,9 +157,13 @@ for event in longpoll.listen():
         if request == "привет":
             user1 = VkUser(event.user_id)
             id_user, first_name, last_name, sex, city, id_city, age = user1.get_user_info()
+            if sex == 1:
+                text_sex = 'женский'
+            else:
+                text_sex = 'мужской'
             write_msg(event.user_id, f"Привет, {first_name}, id - {id_user}\n"
                                      f"Ваш город - {city}\n"
-                                     f"Ваш пол - {sex}\n"
+                                     f"Ваш пол - {text_sex}\n"
                                      f"Ваш возраст - {age}\n\n"
                                      f"Нажми кнопку 'найти' и я покажу найденного человека", keyboard=keyboard_ontime)
             session.add(Users(id_user=id_user, first_name=first_name, last_name=last_name, age=age, sex=sex, city=city,

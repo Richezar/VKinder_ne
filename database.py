@@ -13,7 +13,7 @@ class Users(Base):
     first_name = sq.Column(sq.String(length=20), unique=False, nullable=False)
     last_name = sq.Column(sq.String(length=20), unique=False, nullable=False)
     age = sq.Column(sq.Integer, nullable=False)
-    sex = sq.Column(sq.String(length=7), nullable=False)
+    sex = sq.Column(sq.Integer, nullable=False)
     city = sq.Column(sq.String(length=20), nullable=False)
     id_city = sq.Column(sq.Integer, nullable=False)
 
