@@ -5,7 +5,6 @@ Base = declarative_base()
 DSN = 'postgresql://postgres:postgres@localhost:5432/nikolayshirokov'
 engine = sq.create_engine(DSN)
 
-
 class Users(Base):
     __tablename__ = 'users'
 
@@ -14,10 +13,9 @@ class Users(Base):
     first_name = sq.Column(sq.String(length=20), unique=False, nullable=False)
     last_name = sq.Column(sq.String(length=20), unique=False, nullable=False)
     age = sq.Column(sq.Integer, nullable=False)
-    sex = sq.Column(sq.String(length=7), nullable=False)
+    sex = sq.Column(sq.Integer, nullable=False)
     city = sq.Column(sq.String(length=20), nullable=False)
     id_city = sq.Column(sq.Integer, nullable=False)
-
 
 class Favorites(Base):
     __tablename__ = 'favorites'
@@ -32,7 +30,6 @@ class Favorites(Base):
 def create_tables(engine):
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
-
 
 create_tables(engine)
 Session = sessionmaker(bind=engine)
