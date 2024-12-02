@@ -4,7 +4,6 @@ from keyboard import keyboard_ontime
 
 from vkapi import VkUser, write_msg, longpoll
 
-
 def msg_bot():
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:

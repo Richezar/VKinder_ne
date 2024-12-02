@@ -1,5 +1,4 @@
 from datetime import datetime
-
 import vk_api
 import requests
 from vk_api.longpoll import VkLongPoll, VkEventType
@@ -11,7 +10,6 @@ token = token_bot
 vk = vk_api.VkApi(token=token)
 longpoll = VkLongPoll(vk)
 
-
 def write_msg(user_id, message, keyboard=None):
     post = {
         'user_id': user_id,
@@ -22,7 +20,6 @@ def write_msg(user_id, message, keyboard=None):
         post['keyboard'] = keyboard.get_keyboard()
 
     vk.method('messages.send', post)
-
 
 class VkUser:
     def __init__(self, id_user):
