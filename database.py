@@ -2,7 +2,7 @@ import sqlalchemy as sq
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 Base = declarative_base()
-DSN = 'postgresql://postgres:postgres@localhost:5432/nikolayshirokov'
+DSN = ('postgresql://postgres:postgres@localhost:5432/test')
 engine = sq.create_engine(DSN)
 
 class Users(Base):

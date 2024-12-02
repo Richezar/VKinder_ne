@@ -73,7 +73,7 @@ class VkUser:
             date_list = result['bdate'].split('.')
             if len(date_list) == 3:
                 year = int(date_list[2])
-                year_now = int(datetime.date.today().year)
+                year_now = int(datetime.today().year)
                 return year_now - year
             else:
                 write_msg(self.id_user, 'Введите ваш возраст: ')

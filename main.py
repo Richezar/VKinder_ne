@@ -35,7 +35,7 @@ def msg_bot():
                     write_msg(event.user_id,
                               f'- {list_people[count][0]} {list_people[count][1]}\n'
                               f'- {list_people[count][3]}\n')
-                    photos3 = user1.get_photos(list_people[count][2])
+                    photos3 = user1.get_photos(id_search)
                     if photos3:
                         user1.send_photos(photos3)
                     else:
